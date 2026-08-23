@@ -1,5 +1,4 @@
 pipeline {
-
     agent none
 
     environment {
@@ -9,45 +8,41 @@ pipeline {
     stages {
 
         stage('BUILD') {
-
             agent {
                 label 'test'
             }
 
             steps {
-
                 echo "Building application..."
 
                 checkout scm
 
                 sh '''
                     docker build \
-                        -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                    -t ${IMAGE_NAME}:${BUILD_NUMBER} .
                 '''
             }
         }
 
         stage('TEST') {
-
             agent {
                 label 'test'
             }
 
             steps {
-
                 echo "Testing application..."
 
                 sh '''
-                    docker rm -f abode-test || true
+                    docker rm -f abode-test 2>/dev/null || true
 
                     docker run -d \
-                        --name abode-test \
-                        -p 8081:80 \
-                        ${IMAGE_NAME}:${BUILD_NUMBER}
+                    --name abode-test \
+                    -p 8082:80 \
+                    ${IMAGE_NAME}:${BUILD_NUMBER}
 
-                    sleep 5
+                    slee
 
-                    curl -f http://localhost:8081
+                    curl -f http://localhost:8082
 
                     docker rm -f abode-test
                 '''
@@ -55,9 +50,8 @@ pipeline {
         }
 
         stage('PRODUCTION') {
-
             when {
-                branch 'master'
+                branch 'main'
             }
 
             agent {
@@ -65,24 +59,23 @@ pipeline {
             }
 
             steps {
-
                 echo "Deploying to production..."
 
                 checkout scm
 
                 sh '''
                     docker build \
-                        -t ${IMAGE_NAME}:prod .
+                    -t ${IMAGE_NAME}:prod .
                 '''
 
                 sh '''
-                    docker rm -f abode-production || true
+                    docker rm -f abode-production 2>/dev/null || true
 
                     docker run -d \
-                        --name abode-production \
-                        -p 80:80 \
-                        --restart unless-stopped \
-                        ${IMAGE_NAME}:prod
+                    --name abode-production \
+                    -p 80:80 \
+                    --restart unless-stopped \
+                    ${IMAGE_NAME}:prod
                 '''
 
                 sh '''
@@ -94,13 +87,12 @@ pipeline {
     }
 
     post {
-
         success {
             echo "Pipeline completed successfully."
         }
 
         failure {
-            echo "Pipeline failed."
+            echo "Pipeline failed. Check Console Output."
         }
     }
 }
